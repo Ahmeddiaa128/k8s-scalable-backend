@@ -30,6 +30,7 @@ Terraform (VPC + EKS) → Outputs → Helm (K8s Addons)
 
 # 📁 Project Structure
 
+```
 terraform/
 ├── main.tf
 ├── providers.tf
@@ -47,6 +48,7 @@ terraform/
 │   ├── metrics-server.tf
 │   ├── aws-load-balancer-controller.tf
 │   └── versions.tf
+```
 
 ---
 
@@ -64,23 +66,30 @@ terraform/
 # 🚀 Deployment Steps
 
 ## 1. Initialize Terraform
+```
 cd terraform
 terraform init  
-
+```
 ---
 
 ## 2. Validate Configuration
-terraform validate  
+```
+terraform validate
+```  
 
 ---
 
 ## 3. Plan Infrastructure
-terraform plan  
+```
+terraform plan 
+``` 
 
 ---
 
 ## 4. Apply Infrastructure (VPC + EKS)
-terraform apply  
+```
+terraform apply
+```  
 
 Creates:
 - VPC with public/private subnets
@@ -92,14 +101,18 @@ Creates:
 ---
 
 ## 5. Configure kubectl
-aws eks update-kubeconfig --region us-east-1 --name backend-eks  
+```
+aws eks update-kubeconfig --region us-east-1 --name backend-eks
+```  
 
 ---
 
 ## 6. Deploy Helm Addons
+```
 cd helm  
 terraform init  
-terraform apply  
+terraform apply
+```  
 
 Deploys:
 - Metrics Server (HPA support)
@@ -135,21 +148,6 @@ AWS Load Balancer Controller:
 - Multi-AZ high availability design  
 - Secure private/public networking  
 - Scalable cloud-native foundation  
-
----
-
-# 🧪 Load Testing
-
-seq 1 20000 | xargs -n1 -P100 curl -s http://backend.local/posts > /dev/null  
-
----
-
-# 🧠 Design Highlights
-
-- Modular Terraform architecture
-- Separation of infra and platform layers
-- Remote state integration between layers
-- Production-like scalable design
 
 ---
 
