@@ -2,10 +2,11 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: mongo
-  namespace: k8s-backend  
+  namespace: k8s-backend
 spec:
   serviceName: "mongo"
   replicas: 3
+
   selector:
     matchLabels:
       app: mongo
@@ -14,16 +15,18 @@ spec:
     metadata:
       labels:
         app: mongo
+
     spec:
       containers:
         - name: mongo
           image: mongo:4.4
+
           ports:
             - containerPort: 27017
 
           command:
             - mongod
-            - "--replSet"      #high availability
+            - "--replSet"
             - "rs0"
             - "--bind_ip_all"
 
@@ -35,7 +38,11 @@ spec:
     - metadata:
         name: mongo-data
       spec:
-        accessModes: ["ReadWriteOnce"]
+        accessModes:
+          - ReadWriteOnce
+
+        storageClassName: ebs-sc   #(EBS binding)
+
         resources:
           requests:
             storage: 1Gi
