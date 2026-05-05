@@ -14,19 +14,41 @@ Build and deploy a **scalable CRUD backend service (Posts API)** on AWS with:
 - MongoDB ReplicaSet (StatefulSet)
 - Ingress via AWS Load Balancer Controller
 - Infrastructure as Code using Terraform
+- Containerized backend using Docker
+
+---
+
+# Repository Structure
+
+```
+.
+├── backend/              # Node.js CRUD API
+├── k8s/                  # Kubernetes manifests
+│   ├── backend/
+│   ├── mongo/
+│   ├── ingress/
+│   └── namespace.yaml
+│
+├── terraform/           # AWS Infrastructure (VPC + EKS)
+│   ├── modules/
+│   ├── helm/
+│   ├── main.tf
+│   ├── outputs.tf
+```
+
 
 ---
 
 # Cloud Environment (AWS)
 
-This project is deployed and tested on:
+This project is designed for AWS production-like environment:
 
 - AWS EKS (Managed Kubernetes Cluster)
 - AWS VPC (Custom networking with public/private subnets)
 - AWS ALB (Application Load Balancer via Ingress Controller)
 - IAM Roles for Service Accounts (IRSA)
 
-✔ All infrastructure is provisioned using Terraform on AWS
+✔ Infrastructure is fully provisioned using Terraform
 
 ---
 
@@ -56,7 +78,7 @@ Persistent Storage (AWS EBS via CSI Driver)
 
 ---
 
-## Infrastructure Layer (Terraform)
+# Infrastructure Layer (Terraform)
 
 The system follows a layered cloud-native architecture on AWS EKS:
 
@@ -68,8 +90,9 @@ The system follows a layered cloud-native architecture on AWS EKS:
 - EKS Managed Node Groups
 - AWS EKS Add-ons:
   - EBS CSI Driver (Persistent Storage)
+  - Metrics Server (HPA support)
+  - AWS Load Balancer Controller (Ingress)
 
----
 
 ## Kubernetes Add-ons Layer (Helm)
 
@@ -81,65 +104,69 @@ The system follows a layered cloud-native architecture on AWS EKS:
 
 ---
 
-## Application Layer (Kubernetes Manifests)
+# Application Layer 
 
-- Backend API (Node.js CRUD service)
-  - Deployment
-  - Service (ClusterIP)
-  - HPA (min: 1, max: 5, CPU 70%)
+## Backend API (Node.js)
 
-- MongoDB Database
-  - StatefulSet (3 replicas)
-  - ReplicaSet enabled
-  - Persistent Volume (EBS-backed storage)
+- REST CRUD API for Posts
+- Deployed as Kubernetes Deployment
+- Exposed via ClusterIP Service
+- Scales using HPA (1 → 5 pods)
+
 
 ---
 
-## Key Design Principles
+## Containerization (Docker Layer)
 
-- Separation of concerns (Infra / Cluster / App)
-- High Availability (Multi-AZ + ReplicaSet)
-- Auto Scaling (HPA for backend pods)
-- Fault Tolerance (pod + node failure recovery)
-- Persistent Storage (EBS-backed MongoDB data)
+
+The backend is containerized before Kubernetes deployment.
+
+### Why Docker?
+- Ensures consistent runtime across environments
+- Enables Kubernetes deployments
+- Improves portability and scaling
+
+### Flow
+
+```
+Backend Code → Dockerfile → Docker Image → Docker Hub / ECR → Kubernetes Deployment
+```
+
+### Docker Hub Image
+
+```
+abodiaa/backend-api:latest
+```
+
+✔ Used directly by Kubernetes for deployment
+
+---
+
+# MongoDB Database
+
+- 3 replicas using StatefulSet
+- ReplicaSet enabled
+- Persistent storage using AWS EBS
+
+✔ High Availability  
+✔ Data persistence across pod restarts
+
+---
+
+# Key Design Principles
+
+- Microservices separation
+- High Availability (Multi-AZ)
+- Auto Scaling (HPA)
+- Fault tolerance
+- Persistent storage (EBS)
 - Cloud-native AWS integration
 
 ---
 
-# Architecture (Simplified Flow)
+# Deployment Workflow
 
-The system follows a layered cloud-native architecture on AWS EKS:
-
-
-```
-User → ALB → Ingress → Service → Backend Pods → MongoDB ReplicaSet → EBS Storage
-```
-
----
-
-# Repository Structure
-
-```
-.
-├── backend/              # Node.js CRUD API
-├── k8s/                  # Kubernetes manifests
-│   ├── backend/
-│   ├── mongo/
-│   ├── ingress/
-│   └── namespace.yaml
-│
-├── terraform/           # AWS Infrastructure (VPC + EKS)
-│   ├── modules/
-│   ├── helm/
-│   ├── main.tf
-│   ├── outputs.tf
-```
-
----
-
-# Deployment Workflow (AWS)
-
-## 1. Provision AWS Infrastructure (Terraform)
+## 1. Provision Infrastructure (Terraform)
 
 ```bash
 cd terraform
@@ -147,15 +174,14 @@ terraform init
 terraform apply
 ```
 
-✔ Creates:
-- VPC (public/private subnets)
-- Internet Gateway
-- NAT Gateway
-- EKS Cluster (backend-eks)
-- Node Groups (Auto Scaling enabled)
-- IAM Roles for EKS
+Creates:
 
----
+- VPC + Subnets
+- EKS Cluster
+- Node Groups
+- IAM Roles
+
+--- 
 
 ## 2. Configure kubectl for AWS EKS
 
@@ -194,6 +220,11 @@ http://<ALB-DNS>/posts
 
 ---
 
+
+# Repository Structure
+
+---
+
 # Backend API
 
 Simple CRUD API for Posts:
@@ -214,7 +245,7 @@ DELETE /posts/:id
 - Max Pods: 5  
 - CPU Threshold: 70%
 
-✔ Kubernetes automatically scales backend pods under load
+✔ Automatic scaling under load
 
 ---
 
@@ -326,34 +357,12 @@ kubectl delete pod <mongo-pod>
 
 ---
 
-# Terraform Outputs (Used in Deployment)
-
-- VPC ID
-- Private Subnets
-- EKS Cluster Name
-- Cluster Endpoint
-
-✔ Used automatically for Kubernetes + Helm integration
-
----
-
-# Key Highlights
-
-- Fully deployed on AWS EKS
-- Infrastructure as Code using Terraform
-- Production-like Kubernetes architecture
-- Horizontal Auto Scaling (HPA)
-- Stateful MongoDB ReplicaSet
-- AWS ALB Ingress Controller integration
-- High Availability + Fault tolerance design
-
----
-
 # Storage Layer
 
-- Persistent storage is implemented using AWS EBS (Elastic Block Store)
-- Kubernetes StorageClass is used for dynamic provisioning
-- MongoDB StatefulSet is backed by persistent volumes to ensure data durability
+- AWS EBS (Elastic Block Store)
+- Kubernetes StorageClass (Dynamic provisioning)
+- MongoDB StatefulSet persistence
+
 
 ---
 
@@ -361,27 +370,16 @@ kubectl delete pod <mongo-pod>
 
 - Fully deployed on AWS EKS
 - Infrastructure as Code using Terraform
-- Production-like Kubernetes architecture
+- Dockerized backend service
 - Horizontal Auto Scaling (HPA)
 - Stateful MongoDB ReplicaSet
 - AWS ALB Ingress Controller integration
-- High Availability + Fault tolerance design
-
----
-
-# Required Demo (Submission)
-
-- AWS infrastructure (Terraform)
-- Kubernetes deployment on EKS
-- Live API access ALB
-- Auto scaling in action
-- Pod failure recovery
-- MongoDB resilience test
+- High Availability & Fault Tolerance
 
 ---
 
 # Notes
 
 - AWS credentials required
-- EKS cluster must be created before Kubernetes deployment
-- ALB is automatically provisioned via AWS Load Balancer Controller
+- EKS must be deployed before Kubernetes manifests
+- ALB is automatically created via controller
