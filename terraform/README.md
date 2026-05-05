@@ -147,7 +147,8 @@ AWS Load Balancer Controller:
 - Reusable VPC and EKS modules  
 - Multi-AZ high availability design  
 - Secure private/public networking  
-- Scalable cloud-native foundation  
+- Scalable cloud-native foundation
+- Includes foundational support for Kubernetes persistent storage via AWS EBS CSI Driver (configured in EKS addons layer)  
 
 ---
 
