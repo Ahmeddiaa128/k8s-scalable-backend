@@ -30,13 +30,89 @@ This project is deployed and tested on:
 
 ---
 
-# Architecture
+# Architecture Overview (End-to-End System Design)
+
+The system follows a layered cloud-native architecture on AWS EKS:
+
+---
+
+## High-Level Flow
 
 ```
-User → AWS ALB (Ingress)
-     → Kubernetes Service (ClusterIP)
-     → Backend Pods (Deployment + HPA)
-     → MongoDB ReplicaSet (3 StatefulSet Pods)
+User
+  ↓
+AWS Application Load Balancer (ALB)
+  ↓
+Kubernetes Ingress (AWS Load Balancer Controller)
+  ↓
+Kubernetes Service (ClusterIP)
+  ↓
+Backend Pods (Deployment + HPA Auto Scaling)
+  ↓
+MongoDB ReplicaSet (StatefulSet)
+  ↓
+Persistent Storage (AWS EBS via CSI Driver)
+```
+
+---
+
+## Infrastructure Layer (Terraform)
+
+The system follows a layered cloud-native architecture on AWS EKS:
+
+
+- VPC (Multi-AZ, Public & Private Subnets)
+- Internet Gateway + NAT Gateway
+- EKS Managed Kubernetes Cluster
+- IAM Roles (IRSA for secure service access)
+- EKS Managed Node Groups
+- AWS EKS Add-ons:
+  - EBS CSI Driver (Persistent Storage)
+
+---
+
+## Kubernetes Add-ons Layer (Helm)
+
+- AWS Load Balancer Controller
+  → Automatically provisions ALB for Ingress
+
+- Metrics Server
+  → Enables Horizontal Pod Autoscaling (HPA)
+
+---
+
+## Application Layer (Kubernetes Manifests)
+
+- Backend API (Node.js CRUD service)
+  - Deployment
+  - Service (ClusterIP)
+  - HPA (min: 1, max: 5, CPU 70%)
+
+- MongoDB Database
+  - StatefulSet (3 replicas)
+  - ReplicaSet enabled
+  - Persistent Volume (EBS-backed storage)
+
+---
+
+## Key Design Principles
+
+- Separation of concerns (Infra / Cluster / App)
+- High Availability (Multi-AZ + ReplicaSet)
+- Auto Scaling (HPA for backend pods)
+- Fault Tolerance (pod + node failure recovery)
+- Persistent Storage (EBS-backed MongoDB data)
+- Cloud-native AWS integration
+
+---
+
+# Architecture (Simplified Flow)
+
+The system follows a layered cloud-native architecture on AWS EKS:
+
+
+```
+User → ALB → Ingress → Service → Backend Pods → MongoDB ReplicaSet → EBS Storage
 ```
 
 ---
@@ -153,6 +229,49 @@ DELETE /posts/:id
 
 ---
 
+# MongoDB ReplicaSet Initialization (Important Step)
+
+After StatefulSet pods are running, initialize the ReplicaSet:
+
+```bash
+kubectl exec -it mongo-0 -n k8s-backend -- mongo
+```
+
+Then run:
+
+```javascript
+rs.initiate({
+  _id: "rs0",
+  members: [
+    { _id: 0, host: "mongo-0.mongo:27017" },
+    { _id: 1, host: "mongo-1.mongo:27017" },
+    { _id: 2, host: "mongo-2.mongo:27017" }
+  ]
+})
+```
+
+✔ Enables:
+
+- Primary / Secondary election
+- Data replication
+- High Availability mode
+
+---
+
+# Replica Set Verification
+
+```
+rs.status()
+```
+
+✔ Expected:
+
+- 1 PRIMARY
+- 2 SECONDARY 
+- All HEALTH = 1
+
+---
+
 # Ingress (AWS ALB)
 
 - AWS Load Balancer Controller installed via Helm
@@ -230,15 +349,33 @@ kubectl delete pod <mongo-pod>
 
 ---
 
+# Storage Layer
+
+- Persistent storage is implemented using AWS EBS (Elastic Block Store)
+- Kubernetes StorageClass is used for dynamic provisioning
+- MongoDB StatefulSet is backed by persistent volumes to ensure data durability
+
+---
+
+# Key Highlights
+
+- Fully deployed on AWS EKS
+- Infrastructure as Code using Terraform
+- Production-like Kubernetes architecture
+- Horizontal Auto Scaling (HPA)
+- Stateful MongoDB ReplicaSet
+- AWS ALB Ingress Controller integration
+- High Availability + Fault tolerance design
+
+---
+
 # Required Demo (Submission)
 
-The recorded video includes:
-
-- AWS infrastructure overview (Terraform)
+- AWS infrastructure (Terraform)
 - Kubernetes deployment on EKS
-- Live API access via ALB
-- Auto-scaling demonstration (HPA)
-- Pod failure recovery test
+- Live API access ALB
+- Auto scaling in action
+- Pod failure recovery
 - MongoDB resilience test
 
 ---
